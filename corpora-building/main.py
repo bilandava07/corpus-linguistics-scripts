@@ -1,3 +1,4 @@
+from os.path import exists
 from pathlib import Path
 import os
 from args_parser import parse_arguments
@@ -12,14 +13,7 @@ def extract_character_lines(input_file: Path, output_file: Path, char_marker: st
     # Read in the file
     # Look for char_marker e.g. [GORDON]:
 
-
   pass
-
-
-
-
-
-
 
 
 
@@ -27,14 +21,65 @@ def main():
     # Parse the CLI arguments 
     args = parse_arguments()
 
-
+    files_to_process : list[Path] = []
 
     if args.input_file:
-        # path to input file specified 
+        # path to a single input file specified 
+
+        input_file_path : Path = Path(args.input_file)
+
+        # check if the file exists
+        if not input_file_path.exists():
+            raise FileNotFoundError(f"Input file does not exist: {input_file_path}")
+
+
+        # only process .txt files
+        if input_file_path.suffix == ".txt":
+            files_to_process.append(input_file_path)
+        else:
+            print(f"{input_file_path} is NOT a .txt file! Skippping...")
 
 
     elif args.source_dir:
-        # path to source directory with input files specified
+        # path to a source directory with input files specified
+
+        source_dir : Path = Path(args.source_dir)
+
+        # Iterate through path objects inside the directory
+        for input_path in source_dir.iterdir():
+
+            # only process files not dir
+            if not input_path.is_file():
+                print(f"{input_path} is a directory! Skippping...")
+                continue
+
+            # only process .txt files
+            if input_path.suffix != ".txt":
+                print(f"{input_path} is NOT a .txt file! Skippping...")
+                continue
+
+            files_to_process.append(input_path)
+
+    print(files_to_process)
+
+
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
+
+        
+
+
 
 
 
