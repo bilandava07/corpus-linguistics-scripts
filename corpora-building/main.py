@@ -10,6 +10,48 @@ import questionary
 OPEN_TAG = '['
 CLOSE_TAG = ']'
 
+def find_character_tag(input_line: str) -> str | None:
+    ''' Finds and returns a valid character tag in the string '''
+
+    tag_opened = False
+    tag_closed = False
+
+    character_tag = ""
+    character_name = ""
+
+    for char in input_line:
+        if char == OPEN_TAG:
+            if not tag_opened:
+                tag_opened = True
+            else:
+                raise Exception(f"ERROR. Wrong format. Two open tags found on line: {input_line}")
+
+
+        elif char == CLOSE_TAG:
+
+            if tag_opened:
+                tag_closed = True
+            else:
+                raise Exception(f"ERROR. Wrong format. Close tag with no open tag on line: {input_line}")
+
+
+        else:
+            if tag_opened and not tag_closed:
+                character_name += char
+
+            elif tag_opened and tag_closed:
+                character_tag = OPEN_TAG + character_name + CLOSE_TAG
+                return character_tag
+
+    if tag_opened and not tag_closed:
+        raise Exception(f"ERROR. Wrong format. The open tag was never closed: {input_line}")
+
+    return None
+
+
+
+
+
 def extract_character_dialogue(input_file: Path, character_tag : str) -> str:
     # read in the file content 
     content = input_file.read_text(encoding="utf-8")
@@ -37,43 +79,10 @@ def extract_character_tags_from_file(input_file: Path) -> set[str]:
     character_tags : set[str] = set()
 
     for line in lines:
-        tag_opened = False
-        tag_closed = False
+        character_tag = find_character_tag(line)
 
-        character_tag = ""
-        character_name = ""
-
-
-        for char in line:
-            if char == OPEN_TAG:
-                if not tag_opened:
-                    tag_opened = True
-                else:
-                    raise Exception(f"ERROR. Wrong format. Two open tags found on line: {line}")
-
-
-            elif char == CLOSE_TAG:
-
-                if tag_opened:
-                    tag_closed = True
-                else:
-                    raise Exception(f"ERROR. Wrong format. Close tag with no open tag on line: {line}")
-
-
-            else:
-                if tag_opened and not tag_closed:
-                    character_name += char
-
-                elif tag_opened and tag_closed:
-                    character_tag = OPEN_TAG + character_name + CLOSE_TAG
-                    character_tags.add(character_tag)
-                    break
-
-        if tag_opened and not tag_closed:
-            raise Exception(f"ERROR. Wrong format. The open tag was never closed: {line}")
-
-
-
+        if character_tag:
+            character_tags.add(character_tag)
 
     return character_tags
 
