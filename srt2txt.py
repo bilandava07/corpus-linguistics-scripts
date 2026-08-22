@@ -40,9 +40,12 @@ assert(not (arguments_parsed.subtitle_file and arguments_parsed.output_folder) a
 for file in subtitle_files:
 
     try:
-        assert(Path(file).suffix == ".srt"),"Input file provided is not a .srt file or may be a directory"
-    except:
+        assert(Path(file).suffix == ".srt"), f"Input file provided is not a .srt file or may be a directory! Skipping: {Path(file)}"
+        print(f"Processing: {Path(file)}...")
 
+    except AssertionError as e:
+        print(e)
+        continue
 
 
     subtitle_file_name = file 
