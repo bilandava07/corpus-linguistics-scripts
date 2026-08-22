@@ -6,14 +6,13 @@ def parse_arguments():
             " Description follows.." 
         ),
         epilog=(
+            #TODO:  
             "Example:\n"
-            "  sor_automation -i schools.csv -n 100 -s -d -c\n\n"
-            "At least one report type (-s, -d, or -c) must be selected."
+            "follows..."
+            ""
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-
-
 
     input_arguments = parser.add_mutually_exclusive_group(required=True)
 
@@ -46,6 +45,16 @@ def parse_arguments():
         metavar="<output_directory>",
         help="Path to the directory where the output files will be saved to"
     )
+
+
+    parser.add_argument(
+        "-pt",
+        "--preserve-tags",
+        action="store_true",
+        default=False,
+        help="Set to True to preserve the character tags in the output file"
+    )
+
 
 
     arguments_parsed = parser.parse_args()
