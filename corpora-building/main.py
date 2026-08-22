@@ -9,6 +9,7 @@ import questionary
 
 OPEN_TAG = '['
 CLOSE_TAG = ']'
+SEPARATOR = ':'
 
 def find_character_tag(input_line: str) -> str | None:
     ''' Finds and returns a valid character tag in the string '''
@@ -40,7 +41,7 @@ def find_character_tag(input_line: str) -> str | None:
                 character_name += char
 
             elif tag_opened and tag_closed:
-                character_tag = OPEN_TAG + character_name + CLOSE_TAG
+                character_tag = OPEN_TAG + character_name + CLOSE_TAG + SEPARATOR
                 return character_tag
 
     if tag_opened and not tag_closed:
@@ -52,7 +53,7 @@ def find_character_tag(input_line: str) -> str | None:
 
 
 
-def extract_character_dialogue(input_file: Path, target_character_tag : str) -> str:
+def extract_character_dialogue(input_file: Path, target_character_tag : str, preserve_tags : bool) -> str:
     # read in the file content 
     content = input_file.read_text(encoding="utf-8")
 
@@ -81,6 +82,11 @@ def extract_character_dialogue(input_file: Path, target_character_tag : str) -> 
         if not recording_a_characters_utterance:
             if target_character_tag == find_character_tag(line):
                 recording_a_characters_utterance = True
+
+                if not preserve_tags:
+                    line = line[len(target_character_tag):]
+
+
                 all_dialogue_by_target_character += line + " "
 
     return all_dialogue_by_target_character
@@ -148,10 +154,10 @@ def identify_files_to_process(input_file: str | None, source_dir : str | None) -
     elif source_dir:
         # path to a source directory with input files specified
 
-        source_dir : Path = Path(source_dir)
+        target_dir : Path = Path(source_dir)
 
         # Iterate through path objects inside the directory
-        for input_path in source_dir.iterdir():
+        for input_path in target_dir.iterdir():
 
             # only process files not dir
             if not input_path.is_file():
@@ -168,13 +174,18 @@ def identify_files_to_process(input_file: str | None, source_dir : str | None) -
     return files_to_process
 
 def tag_to_name(tag: str) -> str:
-    name = tag.lstrip(OPEN_TAG).rstrip(CLOSE_TAG).lower()
+    print(tag)
+    tag_no_separator = tag.rstrip(SEPARATOR)
+    name = tag_no_separator.lstrip(OPEN_TAG).rstrip(CLOSE_TAG).lower()
     return name[:1].upper() + name[1:]
 
 
 def main():
     # Parse the CLI arguments 
     args = parse_arguments()
+
+    preserve_tags = args.preserve_tags
+    print(preserve_tags)
 
 
     files_to_process = identify_files_to_process(args.input_file, args.source_dir)
@@ -203,21 +214,44 @@ def main():
             ]
     ).ask()
 
+
+    data_to_write = ""
+
     if action_choice == Action.EXTRACT_CHARACTER:
 
-        all_dialogue_by_chosen_character = ""
+        all_dialogue_by_target_character = ""
 
         for file in files_to_process:
-            all_dialogue_by_chosen_character += extract_character_dialogue(file, character_tag_choice)
+            all_dialogue_by_target_character += extract_character_dialogue(file, character_tag_choice, preserve_tags)
 
-        with open(args.output_file, "w") as f:
-            f.write(all_dialogue_by_chosen_character)
+        data_to_write = all_dialogue_by_target_character
 
-
-        
+       
 
     elif action_choice == Action.EXTRACT_OTHERS:
-        ...
+        target_characters_tags = all_character_tags - {character_tag_choice}
+
+        all_dialogued_by_everyone_but_chosen_character = ""
+
+        # Not the most efficient way, since the text is being read N times where N the amount of target character tags
+        # still instantaneous on modern CPUs, while the logic is simple and reused
+        for file in files_to_process:
+            for target_tag in target_characters_tags:
+                all_dialogued_by_everyone_but_chosen_character += extract_character_dialogue(file, target_tag, preserve_tags)
+
+        data_to_write = all_dialogued_by_everyone_but_chosen_character
+
+
+
+    
+
+    with open(args.output_file, "w") as f:
+        f.write(data_to_write)
+
+
+
+
+
 
 
 
