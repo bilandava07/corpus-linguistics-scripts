@@ -1,0 +1,11 @@
+# mac finder files
+.DS_Store
+
+# Ignore .txt files i.e. corpora and transcript files 
+*.txt
+
+# Ignore the original .srt subtitles files
+*.srt
+
+
+
