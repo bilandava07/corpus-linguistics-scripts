@@ -2,6 +2,20 @@ from os.path import exists
 from pathlib import Path
 import os
 from args_parser import parse_arguments
+from constants import Action
+
+import questionary
+
+
+OPEN_TAG = '['
+CLOSE_TAG = ']'
+
+def extract_character_dialogue(input_file: Path, character_tag : str) -> str:
+    #TODO: implement the actual logic
+
+    return "test\n"
+
+
 
 def extract_character_tags_from_file(input_file: Path) -> set[str]:
 
@@ -14,9 +28,6 @@ def extract_character_tags_from_file(input_file: Path) -> set[str]:
     character_tag = ""
     character_name = ""
 
-    open_tag = '['
-    close_tag = ']'
-
     character_tags : set[str] = set()
 
     for line in lines:
@@ -28,10 +39,10 @@ def extract_character_tags_from_file(input_file: Path) -> set[str]:
 
 
         for char in line:
-            if char == open_tag:
+            if char == OPEN_TAG:
                 tag_opened = True
 
-            elif char == close_tag:
+            elif char == CLOSE_TAG:
                 tag_closed = True
 
             else:
@@ -39,7 +50,7 @@ def extract_character_tags_from_file(input_file: Path) -> set[str]:
                     character_name += char
 
                 elif tag_opened and tag_closed:
-                    character_tag = open_tag + character_name + close_tag
+                    character_tag = OPEN_TAG + character_name + CLOSE_TAG
                     character_tags.add(character_tag)
                     break
 
@@ -62,11 +73,6 @@ def find_all_character_tags(files_to_process: list[Path]) -> set[str]:
 
 
 
-def extract_character_lines(input_file: Path, output_file: Path, char_marker: str):
-    # Read in the file
-    # Look for char_marker e.g. [GORDON]:
-
-  pass
 
 def identify_files_to_process(input_file: str | None, source_dir : str | None) -> list[Path]:
     files_to_process : list[Path] = []
@@ -110,19 +116,57 @@ def identify_files_to_process(input_file: str | None, source_dir : str | None) -
 
     return files_to_process
 
+def tag_to_name(tag: str) -> str:
+    name = tag.lstrip(OPEN_TAG).rstrip(CLOSE_TAG).lower()
+    return name[:1].upper() + name[1:]
 
 
 def main():
     # Parse the CLI arguments 
     args = parse_arguments()
 
+
     files_to_process = identify_files_to_process(args.input_file, args.source_dir)
 
     all_character_tags : set[str] = find_all_character_tags(files_to_process)
-
     print(all_character_tags)
 
+    # prompt the user to pick the character from names
+    character_tag_choice = questionary.select(
+            "Which character that you would like to work with?",
+            choices=[ questionary.Choice(f"{tag_to_name(tag)}", value=tag) for tag in all_character_tags]
+    ).ask()
 
+    # promt the user to pick the action
+    action_choice = questionary.select(
+            "Pick the action that you would like to perform",
+            choices=[
+                questionary.Choice(
+                    f"Extract all dialogue produced by {tag_to_name(character_tag_choice)}",
+                    value=Action.EXTRACT_CHARACTER
+                ),
+                questionary.Choice(
+                    f"Extract all dialogue produced by everyone other than {tag_to_name(character_tag_choice)}",
+                    value=Action.EXTRACT_OTHERS
+                ),
+            ]
+    ).ask()
+
+    if action_choice == Action.EXTRACT_CHARACTER:
+
+        all_dialogue_by_chosen_character = ""
+
+        for file in files_to_process:
+            all_dialogue_by_chosen_character += extract_character_dialogue(file, character_tag_choice)
+
+        with open(args.output_file, "w") as f:
+            f.write(all_dialogue_by_chosen_character)
+
+
+        
+
+    elif action_choice == Action.EXTRACT_OTHERS:
+        ...
 
 
 
@@ -133,24 +177,6 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-  
-
-
-    
 
 
 
