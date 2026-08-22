@@ -52,17 +52,38 @@ def find_character_tag(input_line: str) -> str | None:
 
 
 
-def extract_character_dialogue(input_file: Path, character_tag : str) -> str:
+def extract_character_dialogue(input_file: Path, target_character_tag : str) -> str:
     # read in the file content 
     content = input_file.read_text(encoding="utf-8")
 
     # split into lines and get rid of spaces at the beginning and at the end
     lines = [line.strip() for line in content.splitlines()]
 
+    all_dialogue_by_target_character = ""
 
+    recording_a_characters_utterance = False
 
-    return "test\n"
+    for line in lines:
+        if recording_a_characters_utterance:
+            # stop recording if encountered an empty line or a new tag 
+            if not line:
+                all_dialogue_by_target_character += "\n\n"
+                recording_a_characters_utterance = False
 
+            elif OPEN_TAG in line or CLOSE_TAG in line:
+                if not target_character_tag == find_character_tag(line):
+                    all_dialogue_by_target_character += "\n\n"
+                    recording_a_characters_utterance = False
+
+            else:
+                all_dialogue_by_target_character += line + " "
+
+        if not recording_a_characters_utterance:
+            if target_character_tag == find_character_tag(line):
+                recording_a_characters_utterance = True
+                all_dialogue_by_target_character += line + " "
+
+    return all_dialogue_by_target_character
 
 
 def extract_character_tags_from_file(input_file: Path) -> set[str]:
