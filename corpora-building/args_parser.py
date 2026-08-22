@@ -30,22 +30,6 @@ def parse_arguments():
         help="Path to the directory, containing the .txt transcript files to process"
     )
 
-    output_arguments = parser.add_mutually_exclusive_group(required=True)
-
-    output_arguments.add_argument(
-        "-of",
-        "--output-file",
-        metavar="<output_file_path>",
-        help="Path to the output .txt file"
-    )
-
-    output_arguments.add_argument(
-        "-od",
-        "--output-dir",
-        metavar="<output_directory>",
-        help="Path to the directory where the output files will be saved to"
-    )
-
 
     parser.add_argument(
         "-pt",
@@ -54,7 +38,6 @@ def parse_arguments():
         default=False,
         help="Set to True to preserve the character tags in the output file"
     )
-
 
 
     arguments_parsed = parser.parse_args()

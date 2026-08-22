@@ -129,8 +129,6 @@ def find_all_character_tags(files_to_process: list[Path]) -> set[str]:
 
 
 
-
-
 def identify_files_to_process(input_file: str | None, source_dir : str | None) -> list[Path]:
     files_to_process : list[Path] = []
 
@@ -157,7 +155,7 @@ def identify_files_to_process(input_file: str | None, source_dir : str | None) -
         target_dir : Path = Path(source_dir)
 
         # Iterate through path objects inside the directory
-        for input_path in target_dir.iterdir():
+        for input_path in sorted(target_dir.iterdir()):
 
             # only process files not dir
             if not input_path.is_file():
@@ -173,6 +171,18 @@ def identify_files_to_process(input_file: str | None, source_dir : str | None) -
 
     return files_to_process
 
+def determine_output_dir(input_file: str | None, source_dir : str | None) -> Path:
+    base_output_dir = "./corpora/"
+
+    if input_file:
+        return Path(base_output_dir)
+
+    elif source_dir:
+        return Path(base_output_dir + source_dir)
+
+    return Path(base_output_dir)
+
+
 def tag_to_name(tag: str) -> str:
     print(tag)
     tag_no_separator = tag.rstrip(SEPARATOR)
@@ -185,7 +195,6 @@ def main():
     args = parse_arguments()
 
     preserve_tags = args.preserve_tags
-    print(preserve_tags)
 
 
     files_to_process = identify_files_to_process(args.input_file, args.source_dir)
@@ -216,6 +225,7 @@ def main():
 
 
     data_to_write = ""
+    output_file_name = ""
 
     if action_choice == Action.EXTRACT_CHARACTER:
 
@@ -225,6 +235,7 @@ def main():
             all_dialogue_by_target_character += extract_character_dialogue(file, character_tag_choice, preserve_tags)
 
         data_to_write = all_dialogue_by_target_character
+        output_file_name = f"{tag_to_name(character_tag_choice).lower()}_only.txt"
 
        
 
@@ -240,12 +251,17 @@ def main():
                 all_dialogued_by_everyone_but_chosen_character += extract_character_dialogue(file, target_tag, preserve_tags)
 
         data_to_write = all_dialogued_by_everyone_but_chosen_character
+        output_file_name = f"all_except_{tag_to_name(character_tag_choice).lower()}.txt"
 
 
 
-    
 
-    with open(args.output_file, "w") as f:
+    base_output_dir = determine_output_dir(args.input_file, args.source_dir)
+    base_output_dir.mkdir(parents=True, exist_ok=True)
+
+    full_output_path = base_output_dir / Path(output_file_name)
+
+    with open(full_output_path, "w") as f:
         f.write(data_to_write)
 
 
