@@ -11,7 +11,13 @@ OPEN_TAG = '['
 CLOSE_TAG = ']'
 
 def extract_character_dialogue(input_file: Path, character_tag : str) -> str:
-    #TODO: implement the actual logic
+    # read in the file content 
+    content = input_file.read_text(encoding="utf-8")
+
+    # split into lines and get rid of spaces at the beginning and at the end
+    lines = [line.strip() for line in content.splitlines()]
+
+
 
     return "test\n"
 
@@ -40,10 +46,19 @@ def extract_character_tags_from_file(input_file: Path) -> set[str]:
 
         for char in line:
             if char == OPEN_TAG:
-                tag_opened = True
+                if not tag_opened:
+                    tag_opened = True
+                else:
+                    raise Exception(f"ERROR. Wrong format. Two open tags found on line: {line}")
+
 
             elif char == CLOSE_TAG:
-                tag_closed = True
+
+                if tag_opened:
+                    tag_closed = True
+                else:
+                    raise Exception(f"ERROR. Wrong format. Close tag with no open tag on line: {line}")
+
 
             else:
                 if tag_opened and not tag_closed:
@@ -53,6 +68,12 @@ def extract_character_tags_from_file(input_file: Path) -> set[str]:
                     character_tag = OPEN_TAG + character_name + CLOSE_TAG
                     character_tags.add(character_tag)
                     break
+
+        if tag_opened and not tag_closed:
+            raise Exception(f"ERROR. Wrong format. The open tag was never closed: {line}")
+
+
+
 
     return character_tags
 
