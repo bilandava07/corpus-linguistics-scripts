@@ -15,18 +15,13 @@ def extract_character_lines(input_file: Path, output_file: Path, char_marker: st
 
   pass
 
-
-
-def main():
-    # Parse the CLI arguments 
-    args = parse_arguments()
-
+def identify_files_to_process(input_file: str | None, source_dir : str | None) -> list[Path]:
     files_to_process : list[Path] = []
 
-    if args.input_file:
+    if input_file:
         # path to a single input file specified 
 
-        input_file_path : Path = Path(args.input_file)
+        input_file_path : Path = Path(input_file)
 
         # check if the file exists
         if not input_file_path.exists():
@@ -40,10 +35,10 @@ def main():
             print(f"{input_file_path} is NOT a .txt file! Skippping...")
 
 
-    elif args.source_dir:
+    elif source_dir:
         # path to a source directory with input files specified
 
-        source_dir : Path = Path(args.source_dir)
+        source_dir : Path = Path(source_dir)
 
         # Iterate through path objects inside the directory
         for input_path in source_dir.iterdir():
@@ -60,7 +55,16 @@ def main():
 
             files_to_process.append(input_path)
 
-    print(files_to_process)
+    return files_to_process
+
+
+
+
+def main():
+    # Parse the CLI arguments 
+    args = parse_arguments()
+
+    files_to_process = identify_files_to_process(args.input_file, args.source_dir)
 
 
 
