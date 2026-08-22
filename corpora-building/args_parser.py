@@ -34,14 +34,14 @@ def parse_arguments():
     output_arguments = parser.add_mutually_exclusive_group(required=True)
 
     output_arguments.add_argument(
-        "-if",
+        "-of",
         "--output-file",
         metavar="<output_file_path>",
         help="Path to the output .txt file"
     )
 
     output_arguments.add_argument(
-        "-sd",
+        "-od",
         "--output-dir",
         metavar="<output_directory>",
         help="Path to the directory where the output files will be saved to"
