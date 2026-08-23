@@ -97,7 +97,6 @@ def format_dialogue_lines(input_file: Path, character_tags: set[str]) -> str:
     return formatted_output
 
 
-
 def extract_character_dialogue(input_file: Path, target_character_tag : str, preserve_tags : bool) -> str:
     # read in the file content 
     content = input_file.read_text(encoding="utf-8")
@@ -156,8 +155,6 @@ def extract_character_tags_from_file(input_file: Path) -> set[str]:
     return character_tags
 
 
-
-
 def find_all_character_tags(files_to_process: list[Path]) -> set[str]:
 
     all_character_tags = set()
@@ -167,8 +164,6 @@ def find_all_character_tags(files_to_process: list[Path]) -> set[str]:
         all_character_tags |= extract_character_tags_from_file(file)
 
     return all_character_tags
-
-
 
 
 def identify_files_to_process(input_file: str | None, source_dir : str | None) -> list[Path]:
@@ -214,15 +209,16 @@ def identify_files_to_process(input_file: str | None, source_dir : str | None) -
     return files_to_process
 
 def determine_output_dir(input_file: str | None, source_dir : str | None) -> Path:
-    base_output_dir = "./corpora/"
+    base_output_dir = Path("./corpora/")
 
     if input_file:
-        return Path(base_output_dir)
+        return base_output_dir
 
     elif source_dir:
-        return Path(base_output_dir + source_dir)
+        season_dir = Path(source_dir).name
+        return base_output_dir / season_dir
 
-    return Path(base_output_dir)
+    return base_output_dir
 
 
 def tag_to_name(tag: str) -> str:
@@ -231,8 +227,15 @@ def tag_to_name(tag: str) -> str:
     return name[:1].upper() + name[1:]
 
 
-def main():
+def write_file_to_disk(content: str, output_path: Path):
+    with open(output_path, "w") as f:
+        f.write(content)
 
+    print(f"Wrote output file to:  {output_path}")
+
+
+
+def main():
 
     # Parse the CLI arguments 
     args = parse_arguments()
@@ -269,70 +272,78 @@ def main():
     print()
 
 
-    # prompt the user to pick the character from names
-    character_tag_choice = questionary.select(
+    # Prompt the user to pick the character from names
+    chosen_character_tag = questionary.select(
             "Pick the target character",
             choices=[ questionary.Choice(f"{tag_to_name(tag)}", value=tag) for tag in sorted(all_character_tags)]
     ).ask()
 
-    # promt the user to pick the action
+    # Prompt the user to pick the action
     action_choice = questionary.select(
             "Pick the action that you would like to perform for the target character",
             choices=[
                 questionary.Choice(
-                    f"Extract all dialogue produced by {tag_to_name(character_tag_choice)}",
+                    f"Extract all dialogue produced by {tag_to_name(chosen_character_tag)}",
                     value=Action.EXTRACT_CHARACTER
                 ),
                 questionary.Choice(
-                    f"Extract all dialogue produced by everyone other than {tag_to_name(character_tag_choice)}",
+                    f"Extract all dialogue produced by everyone other than {tag_to_name(chosen_character_tag)}",
                     value=Action.EXTRACT_OTHERS
                 ),
             ]
     ).ask()
 
 
-
-    data_to_write = ""
-    output_file_name = ""
+    chosen_character_name = tag_to_name(chosen_character_tag).lower()
 
     if action_choice == Action.EXTRACT_CHARACTER:
 
-        all_dialogue_by_target_character = ""
+        # Initialize the output directory
+        base_formatted_output_dir = determine_output_dir(args.input_file, args.source_dir) / Path(f"{chosen_character_name}_only{'_tags_preserved' if preserve_tags else ''}")
+        base_formatted_output_dir.mkdir(parents=True, exist_ok=True)
 
         for file in formatted_files_to_process:
-            all_dialogue_by_target_character += extract_character_dialogue(file, character_tag_choice, preserve_tags)
+            dialogue_by_target_character = ""
 
-        data_to_write = all_dialogue_by_target_character
-        output_file_name = f"{tag_to_name(character_tag_choice).lower()}_only.txt"
+            dialogue_by_target_character += extract_character_dialogue(file, chosen_character_tag, preserve_tags)
 
-       
+            output_file = Path(
+                f"{file.stem}_{chosen_character_name}_only"
+                f"{'_tags_preserved' if preserve_tags else ''}.txt"
+            )
+
+            write_file_to_disk(
+                content=dialogue_by_target_character,
+                output_path=base_formatted_output_dir / output_file
+            )
+
 
     elif action_choice == Action.EXTRACT_OTHERS:
-        target_characters_tags = all_character_tags - {character_tag_choice}
 
-        all_dialogued_by_everyone_but_chosen_character = ""
+        # Initialize the output directory
+        base_formatted_output_dir = determine_output_dir(args.input_file, args.source_dir) / Path(f"all_except_{chosen_character_name}{'_tags_preserved' if preserve_tags else ''}")
+        base_formatted_output_dir.mkdir(parents=True, exist_ok=True)
+
+        target_characters_tags = all_character_tags - {chosen_character_tag}
+
+        all_dialogue_except_chosen_character = ""
 
         # Not the most efficient way, since the text is being reread N times where N is the amount of target character tags
         # still instantaneous on modern CPUs, while the logic is simple and reusable
         for file in formatted_files_to_process:
             for target_tag in target_characters_tags:
-                all_dialogued_by_everyone_but_chosen_character += extract_character_dialogue(file, target_tag, preserve_tags)
+                all_dialogue_except_chosen_character += extract_character_dialogue(file, target_tag, preserve_tags)
 
-        data_to_write = all_dialogued_by_everyone_but_chosen_character
-        output_file_name = f"all_except_{tag_to_name(character_tag_choice).lower()}.txt"
+            output_file = Path(
+                f"{file.stem}_except_{chosen_character_name}"
+                f"{'_tags_preserved' if preserve_tags else ''}.txt"
+            )
 
+            write_file_to_disk(
+                content=all_dialogue_except_chosen_character,
+                output_path=base_formatted_output_dir / output_file
+            )
 
-
-    # Write the output file to the disk
-    base_formatted_output_dir = determine_output_dir(args.input_file, args.source_dir)
-    base_formatted_output_dir.mkdir(parents=True, exist_ok=True)
-
-    full_output_path = base_formatted_output_dir / Path(output_file_name)
-
-    with open(full_output_path, "w") as f:
-        f.write(data_to_write)
-
-    print(f"Wrote output file to:  {full_output_path}")
 
 
 if __name__ == "__main__":
