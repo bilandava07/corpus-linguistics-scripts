@@ -50,6 +50,51 @@ def find_character_tag(input_line: str) -> str | None:
     return None
 
 
+def format_dialogue_lines(input_file: Path, character_tags: set[str]) -> str:
+    # read in the file content 
+    content = input_file.read_text(encoding="utf-8")
+
+    # split into lines and get rid of spaces at the beginning and at the end
+    lines = [line.strip() for line in content.splitlines()]
+
+    formatted_output = ""
+
+    recording_a_characters_utterance = False
+
+    for line in lines:
+        if recording_a_characters_utterance:
+            if not line:
+                formatted_output += "\n\n"
+                recording_a_characters_utterance = False
+
+            elif OPEN_TAG in line or CLOSE_TAG in line:
+                raise Exception(
+                f"Formatting error! \n\n {line}\n\n" +
+                "No blank line between two characters' utterances! "
+                )
+
+            else:
+                formatted_output += line + " "
+
+        else: # not recording an utterance
+            if find_character_tag(line):
+                recording_a_characters_utterance = True
+                formatted_output += "\n" + line + " "
+
+            else:
+                if not line:
+                    formatted_output += "\n"
+
+                elif OPEN_TAG in line or CLOSE_TAG in line:
+                    raise Exception(
+                    f"Formatting error! \n\n {line}\n\n" +
+                    "No blank line between two characters' utterances! "
+                    )
+
+                else:
+                    formatted_output += "\n" + "[OTHERS]:" + line + "\n"
+
+    return formatted_output
 
 
 
@@ -71,10 +116,7 @@ def extract_character_dialogue(input_file: Path, target_character_tag : str, pre
                 all_dialogue_by_target_character += "\n\n"
                 recording_a_characters_utterance = False
 
-            elif OPEN_TAG in line or CLOSE_TAG in line:
-                if not target_character_tag == find_character_tag(line):
-                    all_dialogue_by_target_character += "\n\n"
-                    recording_a_characters_utterance = False
+
 
             else:
                 all_dialogue_by_target_character += line + " "
@@ -184,33 +226,58 @@ def determine_output_dir(input_file: str | None, source_dir : str | None) -> Pat
 
 
 def tag_to_name(tag: str) -> str:
-    print(tag)
     tag_no_separator = tag.rstrip(SEPARATOR)
     name = tag_no_separator.lstrip(OPEN_TAG).rstrip(CLOSE_TAG).lower()
     return name[:1].upper() + name[1:]
 
 
 def main():
+
+
     # Parse the CLI arguments 
     args = parse_arguments()
 
     preserve_tags = args.preserve_tags
 
 
-    files_to_process = identify_files_to_process(args.input_file, args.source_dir)
+    input_files = identify_files_to_process(args.input_file, args.source_dir)
 
-    all_character_tags : set[str] = find_all_character_tags(files_to_process)
+    # Format all dialogue before processing
+    base_formatted_output_dir = Path("./formatted")
+    base_formatted_output_dir.mkdir(parents=True, exist_ok=True)
+    formatted_files_to_process : list[Path] = []
+
+    all_character_tags_in_input_files : set[str] = find_all_character_tags(input_files)
+    print("Character tags identified in the input files: ")
+    print(all_character_tags_in_input_files)
+    print()
+
+    for file in input_files:
+        formatted_output = format_dialogue_lines(file, all_character_tags_in_input_files)
+
+        output_file = base_formatted_output_dir / file
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_file, "w") as f:
+            f.write(formatted_output)
+
+        formatted_files_to_process.append(output_file)
+
+    all_character_tags = find_all_character_tags(formatted_files_to_process)
+    print("Character tags after formatting the files: ")
     print(all_character_tags)
+    print()
+
 
     # prompt the user to pick the character from names
     character_tag_choice = questionary.select(
-            "Which character that you would like to work with?",
-            choices=[ questionary.Choice(f"{tag_to_name(tag)}", value=tag) for tag in all_character_tags]
+            "Pick the target character",
+            choices=[ questionary.Choice(f"{tag_to_name(tag)}", value=tag) for tag in sorted(all_character_tags)]
     ).ask()
 
     # promt the user to pick the action
     action_choice = questionary.select(
-            "Pick the action that you would like to perform",
+            "Pick the action that you would like to perform for the target character",
             choices=[
                 questionary.Choice(
                     f"Extract all dialogue produced by {tag_to_name(character_tag_choice)}",
@@ -224,6 +291,7 @@ def main():
     ).ask()
 
 
+
     data_to_write = ""
     output_file_name = ""
 
@@ -231,7 +299,7 @@ def main():
 
         all_dialogue_by_target_character = ""
 
-        for file in files_to_process:
+        for file in formatted_files_to_process:
             all_dialogue_by_target_character += extract_character_dialogue(file, character_tag_choice, preserve_tags)
 
         data_to_write = all_dialogue_by_target_character
@@ -244,9 +312,9 @@ def main():
 
         all_dialogued_by_everyone_but_chosen_character = ""
 
-        # Not the most efficient way, since the text is being read N times where N the amount of target character tags
-        # still instantaneous on modern CPUs, while the logic is simple and reused
-        for file in files_to_process:
+        # Not the most efficient way, since the text is being reread N times where N is the amount of target character tags
+        # still instantaneous on modern CPUs, while the logic is simple and reusable
+        for file in formatted_files_to_process:
             for target_tag in target_characters_tags:
                 all_dialogued_by_everyone_but_chosen_character += extract_character_dialogue(file, target_tag, preserve_tags)
 
@@ -255,21 +323,16 @@ def main():
 
 
 
+    # Write the output file to the disk
+    base_formatted_output_dir = determine_output_dir(args.input_file, args.source_dir)
+    base_formatted_output_dir.mkdir(parents=True, exist_ok=True)
 
-    base_output_dir = determine_output_dir(args.input_file, args.source_dir)
-    base_output_dir.mkdir(parents=True, exist_ok=True)
-
-    full_output_path = base_output_dir / Path(output_file_name)
+    full_output_path = base_formatted_output_dir / Path(output_file_name)
 
     with open(full_output_path, "w") as f:
         f.write(data_to_write)
 
-
-
-
-
-
-
+    print(f"Wrote output file to:  {full_output_path}")
 
 
 if __name__ == "__main__":
