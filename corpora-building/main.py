@@ -326,11 +326,13 @@ def main():
 
         target_characters_tags = all_character_tags - {chosen_character_tag}
 
-        all_dialogue_except_chosen_character = ""
 
         # Not the most efficient way, since the text is being reread N times where N is the amount of target character tags
         # still instantaneous on modern CPUs, while the logic is simple and reusable
         for file in formatted_files_to_process:
+
+            all_dialogue_except_chosen_character = ""
+
             for target_tag in target_characters_tags:
                 all_dialogue_except_chosen_character += extract_character_dialogue(file, target_tag, preserve_tags)
 
